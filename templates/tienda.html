@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo - Mercado Fresco</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .bg-verde-tienda { background-color: #16a34a !important; }
+        .precio-naranja { color: #f97316; font-weight: 900; font-size: 1.5rem; }
+        .btn-verde { background-color: #16a34a; color: white; font-weight: bold; }
+        .btn-verde:hover { background-color: #15803d; color: white; }
+        .caja-gris { background-color: #f3f4f6; border-radius: 8px 8px 0 0; padding: 40px 0; }
+        .dropdown-menu { animation: fadeIn 0.3s; border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-verde-tienda p-3 sticky-top shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold fs-4" href="/"><i class="fas fa-leaf me-2"></i>Mercado Fresco</a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuCliente">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="menuCliente">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-4">
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-medium" href="/"><i class="fas fa-home me-1"></i> Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-bold active border-bottom border-2 border-white" href="/tienda"><i class="fas fa-store-alt me-1"></i> Productos</a>
+                    </li>
+                    {% if logueado %}
+                    <li class="nav-item"><a class="nav-link text-white fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#pedidosModal"><i class="fas fa-box-open me-1"></i>Mis Pedidos</a></li>
+                    {% endif %}
+                </ul>
+
+                <div class="d-flex align-items-center text-white ms-auto mt-2 mt-lg-0">
+                    {% if logueado %}
+                        <button type="button" class="btn position-relative me-4 text-white p-0 border-0" data-bs-toggle="modal" data-bs-target="#carritoModal" id="btn-carrito-nav">
+                            <i class="fas fa-shopping-cart fs-4"></i>
+                            <span id="contador-carrito" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm">0</span>
+                        </button>
+                        
+                        <div class="dropdown">
+                            <a class="btn btn-outline-light rounded-pill fw-bold dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle fs-5 me-2"></i> {{ nombre_usuario }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end mt-2 p-2 shadow-lg border-0 rounded-4">
+                                <li><h6 class="dropdown-header">Mi Cuenta</h6></li>
+                                <li><a class="dropdown-item py-2 rounded" href="#"><i class="fas fa-cog text-muted me-2"></i>Configuración</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item py-2 rounded text-danger fw-bold" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="/login" class="btn btn-light text-success btn-sm fw-bold me-2 px-3 py-2 rounded-pill">Iniciar Sesión</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid my-4 px-4">
+        <div class="row">
+            <div class="col-lg-3 mb-4">
+                <div class="card shadow-sm border-0 sticky-top" style="top: 90px; border-radius: 12px;">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-filter text-success me-2"></i>Filtros</h5>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Buscar Producto</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="filtro-texto" class="form-control border-start-0 ps-0 shadow-none" placeholder="Ej. Manzana...">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Categoría</label>
+                            <select id="filtro-categoria" class="form-select shadow-none">
+                                <option value="todas">Todas las categorías</option>
+                                {% for c in categorias %}
+                                <option value="{{ c[0] }}">{{ c[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold d-flex justify-content-between">
+                                <span>Precio Máximo:</span><span id="label-precio" class="text-primary">$200.00</span>
+                            </label>
+                            <input type="range" class="form-range" id="filtro-precio" min="0" max="200" step="1" value="200">
+                        </div>
+                        <button onclick="limpiarFiltros()" class="btn btn-outline-secondary w-100 fw-bold">Limpiar Filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold text-dark m-0">Catálogo</h2>
+                    <span class="text-muted fw-bold" id="contador-productos">{{ productos|length }} productos disponibles</span>
+                </div>
+                
+                <div class="row g-4" id="contenedor-productos">
+                    {% for p in productos %}
+                    <div class="col-md-4 col-sm-6 tarjeta-producto" data-nombre="{{ p[1]|lower }}" data-categoria="{{ p[3] }}" data-precio="{{ p[2] }}" data-stock="{{ p[4] }}">
+                        <div class="card h-100 border-0 shadow-sm transition-all" style="border-radius: 12px; overflow: hidden;">
+                            <span class="badge bg-success position-absolute top-0 start-0 m-2 px-2 py-1 z-1 shadow-sm">{{ p[3] }}</span>
+                            
+                            <div class="caja-gris text-center position-relative">
+                                <i class="fas fa-box-open fa-4x text-secondary opacity-50"></i>
+                                <span class="position-absolute bottom-0 end-0 m-2 badge bg-light text-muted border border-secondary-subtle">
+                                    Stock: <span id="disp-{{ p[0] }}">{{ p[4] }}</span>
+                                </span>
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column text-center p-4">
+                                <h5 class="card-title fw-bold text-dark mb-1">{{ p[1] }}</h5>
+                                <h4 class="precio-naranja mb-3">${{ p[2] }}</h4>
+                                
+                                <div class="mt-auto">
+                                    {% if p[4] > 0 %}
+                                        
+                                        {% if logueado %}
+                                            <div class="d-flex justify-content-center align-items-center mb-3">
+                                                <button class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="cambiarCantidad({{ p[0] }}, -1, {{ p[4] }})">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <input type="number" id="cant-{{ p[0] }}" class="form-control form-control-sm text-center mx-2 border-0 fw-bold bg-light fs-5" style="width: 50px;" value="1" min="1" max="{{ p[4] }}" readonly>
+                                                <button class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="cambiarCantidad({{ p[0] }}, 1, {{ p[4] }})">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                            <button onclick="agregarAlCarrito({{ p[0] }}, '{{ p[1] }}', {{ p[2] }}, {{ p[4] }})" class="btn btn-verde w-100 rounded-pill py-2 shadow-sm">
+                                                <i class="fas fa-cart-plus me-1"></i> Al Carrito
+                                            </button>
+                                        {% else %}
+                                            <button onclick="requiereLogin()" class="btn btn-outline-secondary w-100 rounded-pill py-2 shadow-sm fw-bold mt-4">
+                                                <i class="fas fa-lock me-2"></i>Inicia sesión
+                                            </button>
+                                        {% endif %}
+                                        
+                                    {% else %}
+                                        <div class="alert alert-danger py-2 mb-0 fw-bold rounded-pill mt-4" role="alert">
+                                            <i class="fas fa-times-circle me-1"></i> ¡Agotado!
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="carritoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 bg-light">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-shopping-cart text-success me-2"></i>Tu Carrito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <ul id="lista-carrito" class="list-group list-group-flush mb-3"></ul>
+                    <div class="d-flex justify-content-between align-items-center fw-bold fs-4 mt-4 pt-3 border-top">
+                        <span>Total:</span><span id="total-carrito" class="text-success">$0.00</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Seguir Comprando</button>
+                    <button type="button" class="btn btn-verde rounded-pill px-4" onclick="procesarCompra()"><i class="fas fa-credit-card me-2"></i>Pagar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="pedidosModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 bg-verde-tienda text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i>Historial de Pedidos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <i class="fas fa-receipt fa-4x text-muted opacity-25 mb-3"></i>
+                    <h5 class="text-muted">Aún no has realizado ninguna compra.</h5>
+                    <p>¡Tus próximos tickets aparecerán aquí!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
+        <div id="toastCarrito" class="toast align-items-center text-bg-success border-0 shadow-lg" role="alert" style="border-radius: 10px;">
+            <div class="d-flex">
+                <div class="toast-body fw-bold fs-6">
+                    <i class="fas fa-check-circle me-2"></i><span id="toast-mensaje">Agregado</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Función para enviar al usuario al login si intenta interactuar sin sesión
+        function requiereLogin() {
+            alert("Para poder comprar, por favor inicia sesión o crea una cuenta gratis.");
+            window.location.href = "/login";
+        }
+    </script>
+</body>
+</html>

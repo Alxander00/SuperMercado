@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="fw-bold mb-4">Gestión de Inventario</h2>
+
+    <div class="admin-card-form mb-5">
+        <h5 class="fw-bold text-success mb-4"><i class="fas fa-plus-circle me-2"></i>Publicar Producto Nuevo</h5>
+        <form action="/productos" method="POST" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">Nombre del Producto</label>
+                <input type="text" name="nombre" class="form-control rounded-pill" placeholder="Ej: Manzana Roja" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Precio ($)</label>
+                <input type="number" step="0.01" name="precio_base" class="form-control rounded-pill" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Stock Inicial</label>
+                <input type="number" name="stock" class="form-control rounded-pill" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Categoría</label>
+                <select name="id_categoria" class="form-select rounded-pill">
+                    {% for cat in categorias %}<option value="{{ cat[0] }}">{{ cat[1] }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold shadow-sm">Publicar</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table admin-table align-middle">
+            <thead class="text-muted">
+                <tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
+            </thead>
+            <tbody>
+                {% for p in productos %}
+                <tr class="mb-2">
+                    <td class="fw-bold">{{ p[1] }}</td>
+                    <td><span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ p[3] }}</span></td>
+                    <td class="text-success fw-bold fs-5">${{ p[2] }}</td>
+                    <td>{{ p[4] }} unidades</td>
+                    <td><a href="/productos/eliminar/{{ p[0] }}" class="btn btn-light text-danger btn-sm rounded-circle"><i class="fas fa-trash"></i></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

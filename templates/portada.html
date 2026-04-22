@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Fresco - El Salvador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Corrección de espacio para que el Navbar no tape el contenido */
+        body { padding-top: 0; }
+        .portada-hero {
+            height: 90vh; /* Altura casi completa de pantalla */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-top: 0;
+            position: relative;
+        }
+        /* Ajuste para el texto gigante para que no se corte */
+        .texto-hero {
+            max-width: 900px;
+            margin: 0 auto;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow" style="background-color: #16a34a !important; z-index: 10000 !important;">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold fs-4 text-white" href="/" style="color: white !important;">
+            <i class="fas fa-leaf me-2"></i>Mercado Fresco
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="menuPrincipal">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-4">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold" href="/tienda" style="color: white !important;">
+                        <i class="fas fa-store-alt me-1"></i> Productos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-medium" href="#" style="color: rgba(255,255,255,0.8) !important;">
+                        <i class="fas fa-percent me-1"></i> Ofertas
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="d-flex align-items-center">
+                {% if logueado %}
+                    <div class="dropdown">
+                        <button class="btn btn-light text-success rounded-pill fw-bold dropdown-toggle px-4" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-2"></i>{{ nombre_usuario }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><a class="dropdown-item" href="#">Mi Perfil</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="/logout">Cerrar Sesión</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="/login" class="btn btn-light text-success fw-bold me-2 px-4 py-2 rounded-pill shadow-sm" style="background-color: white !important; color: #16a34a !important;">
+                        Ingresar
+                    </a>
+                    <a href="/registro" class="btn btn-outline-light fw-bold px-4 py-2 rounded-pill" style="color: white !important; border-color: white !important;">
+                        Registrarse
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+    <div class="portada-hero text-white">
+        <div class="container texto-hero">
+            <i class="fas fa-leaf fa-5x mb-4 text-success animate__animated animate__backInDown"></i>
+            <h1 class="display-1 fw-bold mb-3 animate__animated animate__fadeInUp">La frescura de El Salvador en tu mesa</h1>
+            <p class="lead fs-3 mb-5 animate__animated animate__fadeInUp animate__delay-1s">Calidad premium de nuestra tierra directo a tu hogar.</p>
+            <div class="animate__animated animate__bounceIn animate__delay-2s">
+                <a href="/tienda" class="btn btn-success btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg border-2 border-white me-2">
+                    <i class="fas fa-shopping-basket me-2"></i> Ir de Compras
+                </a>
+                <a href="#mas-info" class="btn btn-outline-light btn-lg rounded-pill px-4 py-3">
+                    Conocer más <i class="fas fa-chevron-down ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="mas-info" class="container-fluid bg-white py-5">
+        <div class="container">
+            <div class="row align-items-center py-5">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h2 class="display-4 fw-bold text-dark mb-4">Cultivado con pasión</h2>
+                    <p class="fs-5 text-muted mb-4">Apoyamos a nuestros agricultores locales para llevarte lo mejor de nuestra tierra. Al comprar en Mercado Fresco, estás impulsando la economía de cientos de familias salvadoreñas.</p>
+                    <div class="d-flex gap-3">
+                        <div class="p-3 bg-light rounded-4 text-center flex-grow-1 border">
+                            <i class="fas fa-shipping-fast text-success fs-3 mb-2"></i>
+                            <p class="mb-0 fw-bold small">Envío Express</p>
+                        </div>
+                        <div class="p-3 bg-light rounded-4 text-center flex-grow-1 border">
+                            <i class="fas fa-shield-alt text-success fs-3 mb-2"></i>
+                            <p class="mb-0 fw-bold small">Pago Seguro</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="ratio ratio-16x9 shadow-lg rounded-4 overflow-hidden border border-5 border-white">
+                        <video autoplay muted loop poster="https://images.unsplash.com/photo-1542838132-92c53300491e">
+                            <source src="https://assets.mixkit.co/videos/preview/mixkit-fresh-vegetables-in-a-market-40156-large.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-5 pb-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold display-5">Explora nuestros pasillos</h2>
+            <p class="text-muted fs-5">Encuentra todo lo que necesitas en un solo lugar</p>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-3" onclick="window.location.href='/tienda'">
+                <div class="card cat-card-inicio shadow-sm p-4 border-0">
+                    <div class="cat-icon-circle"><i class="fas fa-apple-alt"></i></div>
+                    <h4 class="fw-bold">Frutas</h4>
+                </div>
+            </div>
+            <div class="col-md-3" onclick="window.location.href='/tienda'">
+                <div class="card cat-card-inicio shadow-sm p-4 border-0">
+                    <div class="cat-icon-circle"><i class="fas fa-carrot"></i></div>
+                    <h4 class="fw-bold">Verduras</h4>
+                </div>
+            </div>
+            <div class="col-md-3" onclick="window.location.href='/tienda'">
+                <div class="card cat-card-inicio shadow-sm p-4 border-0">
+                    <div class="cat-icon-circle"><i class="fas fa-cheese"></i></div>
+                    <h4 class="fw-bold">Lácteos</h4>
+                </div>
+            </div>
+            <div class="col-md-3" onclick="window.location.href='/tienda'">
+                <div class="card cat-card-inicio shadow-sm p-4 border-0">
+                    <div class="cat-icon-circle"><i class="fas fa-drumstick-bite"></i></div>
+                    <h4 class="fw-bold">Carnes</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0 small">© 2026 Mercado Fresco El Salvador | Sistemas Informáticos</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

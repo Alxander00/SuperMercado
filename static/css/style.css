@@ -1,0 +1,456 @@
+:root {
+    --sidebar-width: 260px;
+    /* Paleta de Supermercado: Verdes y Naranjas */
+    --primary-color: #16a34a;  /* Verde fresco (frutas/verduras) */
+    --primary-hover: #15803d;
+    --secondary-color: #f97316; /* Naranja (ofertas) */
+    --bg-light: #f9fafb;
+    --sidebar-bg: #064e3b;      /* Verde oscuro corporativo */
+}
+
+body { 
+    font-family: 'Inter', sans-serif; 
+    background-color: var(--bg-light);
+    overflow-x: hidden;
+}
+
+/* --- Estilos del Admin (Sidebar y Navbar) --- */
+.sidebar { 
+    height: 100vh; 
+    background-color: var(--sidebar-bg); 
+    color: white; 
+    position: fixed; 
+    width: var(--sidebar-width);
+    transition: all 0.3s;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    font-weight: 600;
+    font-size: 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-header i { margin-right: 10px; color: #4ade80; } /* Icono verde claro */
+
+.sidebar a { 
+    color: #a7f3d0; 
+    text-decoration: none; 
+    padding: 12px 24px; 
+    display: flex;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.sidebar a i { width: 25px; margin-right: 10px; font-size: 1.1rem; }
+
+.sidebar a:hover, .sidebar a.active { 
+    color: white; 
+    background-color: rgba(255,255,255,0.1); 
+    border-left: 4px solid #4ade80;
+}
+
+.top-navbar {
+    margin-left: var(--sidebar-width);
+    background: white;
+    padding: 15px 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.main-content { 
+    margin-left: var(--sidebar-width); 
+    padding: 30px; 
+    min-height: calc(100vh - 70px);
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+/* --- Estilos del Cliente (Tienda) --- */
+.navbar-tienda {
+    background-color: var(--primary-color) !important;
+}
+
+.hero-banner {
+    background: linear-gradient(rgba(22, 163, 74, 0.8), rgba(6, 78, 59, 0.9)), url('https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 80px 0;
+    border-radius: 0 0 30px 30px;
+    margin-bottom: 40px;
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.product-card { 
+    transition: transform 0.2s; 
+    border: 1px solid #e5e7eb;
+}
+.product-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08); 
+    border-color: var(--primary-color);
+}
+
+.img-placeholder { 
+    background-color: #f3f4f6; 
+    height: 180px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: #9ca3af;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.precio-tag {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--secondary-color);
+}
+
+.btn-agregar {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    border: none;
+}
+.btn-agregar:hover {
+    background-color: var(--primary-hover);
+    color: white;
+}
+
+/* --- Login --- */
+.login-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--sidebar-bg);
+    background-image: url('https://images.unsplash.com/photo-1578916171728-46686eac8d58?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-blend-mode: overlay;
+}
+.login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 15px; }
+
+/* --- Portada Principal (Landing Page) --- */
+.portada-hero {
+    min-height: 85vh;
+    /* Filtro oscuro + Imagen de vegetales de Unsplash */
+    background: linear-gradient(rgba(6, 78, 59, 0.85), rgba(22, 163, 74, 0.7)), url('https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+/* --- MAGIA VISUAL: Categorías y Buscador --- */
+.buscador-gigante {
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s;
+}
+.buscador-gigante:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.1);
+}
+
+.category-pills-wrapper {
+    /* Ocultar barra de scroll pero permitir deslizamiento en celulares */
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+    overflow-x: auto;
+}
+.category-pills-wrapper::-webkit-scrollbar { display: none; }
+
+.btn-categoria {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 50px;
+    padding: 10px 24px;
+    font-weight: 600;
+    color: #4b5563;
+    background: white;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.btn-categoria:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+.btn-categoria.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+}
+
+/* Menú desplegable del usuario */
+.dropdown-menu-custom {
+    border: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border-radius: 12px;
+}
+
+/* Buscador Moderno */
+.search-container {
+    max-width: 700px;
+    margin: -30px auto 40px; /* Sube un poco sobre el banner */
+    position: relative;
+    z-index: 10;
+}
+.search-bar {
+    border-radius: 50px;
+    padding: 15px 30px 15px 60px;
+    border: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    font-size: 1.1rem;
+}
+.search-icon {
+    position: absolute;
+    left: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-color);
+}
+
+/* Categorías Estilo Burbuja */
+.category-pills {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 10px 0 25px;
+    scrollbar-width: none;
+}
+.category-pills::-webkit-scrollbar { display: none; }
+
+.pill {
+    white-space: nowrap;
+    padding: 10px 25px;
+    border-radius: 50px;
+    background: white;
+    border: 2px solid #edf2f7;
+    color: #4a5568;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.pill:hover, .pill.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 5px 15px rgba(22, 163, 74, 0.3);
+}
+
+/* --- Video Hero Styling --- */
+.video-wrapper {
+    position: relative;
+    height: 80vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#hero-video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    transform: translate(-50%, -50%);
+    z-index: -1;
+    object-fit: cover;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(6, 78, 59, 0.65); /* Filtro verde oscuro traslúcido */
+    z-index: 0;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    color: white;
+}
+
+/* --- Categorías Destacadas --- */
+.cat-card-inicio {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: white;
+}
+
+.cat-card-inicio:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.cat-icon-circle {
+    width: 80px;
+    height: 80px;
+    background: #f0fdf4;
+    color: #16a34a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 2rem;
+    transition: 0.3s;
+}
+
+.cat-card-inicio:hover .cat-icon-circle {
+    background: #16a34a;
+    color: white;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.portada-hero {
+    /* Esto asegura que la imagen empiece justo después del navbar */
+    margin-top: 0 !important; 
+}
+
+/* Sidebar Logout Visibility */
+.sidebar .logout-btn {
+    background: #ef4444; /* Rojo vibrante */
+    color: white !important;
+    margin: 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    border: none;
+}
+
+/* Admin Product Cards */
+.admin-product-form {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border-left: 5px solid #16a34a;
+}
+
+/* Sidebar: Botón Cerrar Sesión Destacado */
+.sidebar .logout-link {
+    background: #ef4444 !important;
+    color: white !important;
+    margin: 30px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    transition: 0.3s;
+}
+
+.sidebar .logout-link:hover {
+    background: #dc2626 !important;
+    transform: scale(1.05);
+}
+
+/* Admin: Formulario Estilo Card */
+.admin-card-form {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border-top: 5px solid #16a34a;
+}
+
+/* Tabla Estilo Fila Flotante */
+.admin-table tr {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.admin-table td {
+    padding: 15px !important;
+    border: none !important;
+}
+
+/* Sidebar: Botón Cerrar Sesión Destacado */
+.sidebar .logout-link {
+    background: #ef4444 !important;
+    color: white !important;
+    margin: 30px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    transition: 0.3s;
+}
+
+.sidebar .logout-link:hover {
+    background: #dc2626 !important;
+    transform: scale(1.05);
+}
+
+/* Tablas Admin Estilo Cards */
+.admin-table tr {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.admin-table td { padding: 15px !important; border: none !important; }
+
+
+/* Gradientes para las KPI Cards */
+.bg-gradient-success { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); }
+.bg-gradient-warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+.bg-gradient-info { background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%); }
+
+.icon-shape {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Sidebar: Botón Cerrar Sesión Destacado */
+.sidebar .logout-link {
+    background: rgba(239, 68, 68, 0.9) !important;
+    color: white !important;
+    margin: 30px 15px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    transition: 0.3s;
+}
+
+.sidebar .logout-link:hover {
+    background: #dc2626 !important;
+    transform: scale(1.03);
+}
+
+/* Tablas Admin Estilo Cards */
+.admin-table tr {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+.admin-table td { padding: 18px !important; border: none !important; }

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold m-0">Registro Maestro de Ventas</h2>
+            <p class="text-muted">Mostrando {{ ventas|length }} de <b>{{ total_total }}</b> registros totales</p>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-dark rounded-pill px-4 dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-2"></i>Exportar
+            </button>
+            <ul class="dropdown-menu border-0 shadow-lg">
+                <li><a class="dropdown-item" href="/admin/reporte/mes">Descargar PDF del Mes</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table admin-table align-middle" style="border-collapse: separate; border-spacing: 0 10px;">
+            <thead class="text-muted small fw-bold">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>CLIENTE</th>
+                    <th>FECHA</th>
+                    <th>TOTAL FACTURADO</th>
+                    <th class="text-center">ACCIÓN</th>
+                </tr>
+            </thead>
+            <tbody style="border-top: 10px solid transparent;">
+                {% for v in ventas %}
+                <tr class="bg-white shadow-sm" style="border-radius: 15px;">
+                    <td class="ps-4 fw-bold" style="border-radius: 15px 0 0 15px;">#{{ v[0] }}</td>
+                    <td><i class="fas fa-user-circle text-muted me-2"></i>{{ v[1] }}</td>
+                    <td>{{ v[2] }}</td>
+                    <td class="text-success fw-bold fs-5">${{ v[3] }}</td>
+                    <td class="text-center" style="border-radius: 0 15px 15px 0;">
+                        <button class="btn btn-light btn-sm rounded-circle"><i class="fas fa-eye text-primary"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {{ 'disabled' if page == 1 }}">
+                <a class="page-link rounded-start-pill px-3" href="{{ url_for('vista_ventas', page=page-1) }}">Anterior</a>
+            </li>
+
+            {% for p in range(max(1, page-2), min(total_pages, page+2) + 1) %}
+            <li class="page-item {{ 'active' if p == page }}">
+                <a class="page-link {{ 'bg-success border-success' if p == page }}" href="{{ url_for('vista_ventas', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+
+            <li class="page-item {{ 'disabled' if page == total_pages }}">
+                <a class="page-link rounded-end-pill px-3" href="{{ url_for('vista_ventas', page=page+1) }}">Siguiente</a>
+            </li>
+        </ul>
+        <p class="text-center text-muted small mt-2">Página {{ page }} de {{ total_pages }}</p>
+    </nav>
+</div>
+{% endblock %}
