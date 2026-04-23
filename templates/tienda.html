@@ -15,6 +15,24 @@
         .btn-verde:hover { background-color: #15803d; color: white; }
         .caja-gris { background-color: #f3f4f6; border-radius: 8px 8px 0 0; padding: 40px 0; }
         .dropdown-menu { animation: fadeIn 0.3s; border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        /* Modal de compra exitosa */
+        .icono-exito-circulo {
+            width: 90px; height: 90px;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 8px 25px rgba(22, 163, 74, 0.35);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .badge.bg-success-subtle {
+            background-color: #dcfce7 !important;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -22,7 +40,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-verde-tienda p-3 sticky-top shadow-sm">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold fs-4" href="/"><i class="fas fa-leaf me-2"></i>Mercado Fresco</a>
-            
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuCliente">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -36,7 +54,11 @@
                         <a class="nav-link text-white fw-bold active border-bottom border-2 border-white" href="/tienda"><i class="fas fa-store-alt me-1"></i> Productos</a>
                     </li>
                     {% if logueado %}
-                    <li class="nav-item"><a class="nav-link text-white fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#pedidosModal"><i class="fas fa-box-open me-1"></i>Mis Pedidos</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#pedidosModal">
+                            <i class="fas fa-box-open me-1"></i>Mis Pedidos
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
 
@@ -46,14 +68,14 @@
                             <i class="fas fa-shopping-cart fs-4"></i>
                             <span id="contador-carrito" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm">0</span>
                         </button>
-                        
+
                         <div class="dropdown">
                             <a class="btn btn-outline-light rounded-pill fw-bold dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
                                 <i class="fas fa-user-circle fs-5 me-2"></i> {{ nombre_usuario }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end mt-2 p-2 shadow-lg border-0 rounded-4">
                                 <li><h6 class="dropdown-header">Mi Cuenta</h6></li>
-                                <li><a class="dropdown-item py-2 rounded" href="#"><i class="fas fa-cog text-muted me-2"></i>Configuración</a></li>
+                                <li><a class="dropdown-item py-2 rounded" href="/cliente/historial"><i class="fas fa-history text-muted me-2"></i>Historial de Compras</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item py-2 rounded text-danger fw-bold" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                             </ul>
@@ -68,6 +90,7 @@
 
     <div class="container-fluid my-4 px-4">
         <div class="row">
+            <!-- Barra lateral de filtros -->
             <div class="col-lg-3 mb-4">
                 <div class="card shadow-sm border-0 sticky-top" style="top: 90px; border-radius: 12px;">
                     <div class="card-body p-4">
@@ -99,32 +122,32 @@
                 </div>
             </div>
 
+            <!-- Catálogo de productos -->
             <div class="col-lg-9">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold text-dark m-0">Catálogo</h2>
                     <span class="text-muted fw-bold" id="contador-productos">{{ productos|length }} productos disponibles</span>
                 </div>
-                
+
                 <div class="row g-4" id="contenedor-productos">
                     {% for p in productos %}
                     <div class="col-md-4 col-sm-6 tarjeta-producto" data-nombre="{{ p[1]|lower }}" data-categoria="{{ p[3] }}" data-precio="{{ p[2] }}" data-stock="{{ p[4] }}">
                         <div class="card h-100 border-0 shadow-sm transition-all" style="border-radius: 12px; overflow: hidden;">
                             <span class="badge bg-success position-absolute top-0 start-0 m-2 px-2 py-1 z-1 shadow-sm">{{ p[3] }}</span>
-                            
+
                             <div class="caja-gris text-center position-relative">
                                 <i class="fas fa-box-open fa-4x text-secondary opacity-50"></i>
                                 <span class="position-absolute bottom-0 end-0 m-2 badge bg-light text-muted border border-secondary-subtle">
                                     Stock: <span id="disp-{{ p[0] }}">{{ p[4] }}</span>
                                 </span>
                             </div>
-                            
+
                             <div class="card-body d-flex flex-column text-center p-4">
                                 <h5 class="card-title fw-bold text-dark mb-1">{{ p[1] }}</h5>
                                 <h4 class="precio-naranja mb-3">${{ p[2] }}</h4>
-                                
+
                                 <div class="mt-auto">
                                     {% if p[4] > 0 %}
-                                        
                                         {% if logueado %}
                                             <div class="d-flex justify-content-center align-items-center mb-3">
                                                 <button class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 32px; height: 32px; padding: 0;" onclick="cambiarCantidad({{ p[0] }}, -1, {{ p[4] }})">
@@ -143,7 +166,6 @@
                                                 <i class="fas fa-lock me-2"></i>Inicia sesión
                                             </button>
                                         {% endif %}
-                                        
                                     {% else %}
                                         <div class="alert alert-danger py-2 mb-0 fw-bold rounded-pill mt-4" role="alert">
                                             <i class="fas fa-times-circle me-1"></i> ¡Agotado!
@@ -159,6 +181,9 @@
         </div>
     </div>
 
+    <!-- ==========================================
+         MODAL: CARRITO DE COMPRAS
+    ========================================== -->
     <div class="modal fade" id="carritoModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -174,12 +199,57 @@
                 </div>
                 <div class="modal-footer border-0 bg-light rounded-bottom-4">
                     <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Seguir Comprando</button>
-                    <button type="button" class="btn btn-verde rounded-pill px-4" onclick="procesarCompra()"><i class="fas fa-credit-card me-2"></i>Pagar</button>
+                    <button type="button" id="btn-pagar" class="btn btn-verde rounded-pill px-4" onclick="procesarCompra()">
+                        <i class="fas fa-credit-card me-2"></i>Pagar
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- ==========================================
+         MODAL: COMPRA EXITOSA + DESCARGA TICKET
+    ========================================== -->
+    <div class="modal fade" id="modalCompraExitosa" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg text-center p-2">
+                <div class="modal-body p-5">
+                    <div class="icono-exito-circulo mb-3">
+                        <i class="fas fa-check fa-2x text-white"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-1">¡Compra Exitosa!</h4>
+                    <p class="text-muted mb-1">Tu pedido ha sido registrado correctamente.</p>
+
+                    <div class="alert alert-success border-0 rounded-3 mt-3 mb-4 py-2">
+                        <i class="fas fa-hashtag me-1"></i>
+                        Ticket <strong id="modal-num-ticket">#0</strong>
+                    </div>
+
+                    <div class="bg-light rounded-3 p-3 mb-4">
+                        <i class="fas fa-file-pdf fa-2x text-danger mb-2"></i>
+                        <p class="mb-0 small text-muted fw-bold">Tu ticket PDF se está descargando automáticamente.</p>
+                        <p class="mb-0 small text-muted">Si no inició la descarga, usa el botón de abajo.</p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a id="btn-descargar-ticket" href="#" class="btn btn-dark rounded-pill fw-bold py-2">
+                            <i class="fas fa-download me-2 text-danger"></i>Descargar Ticket PDF
+                        </a>
+                        <button type="button" class="btn btn-outline-success rounded-pill fw-bold py-2" data-bs-dismiss="modal">
+                            <i class="fas fa-shopping-bag me-2"></i>Seguir Comprando
+                        </button>
+                        <a href="/cliente/historial" class="btn btn-link text-muted small">
+                            <i class="fas fa-history me-1"></i>Ver mi historial de compras
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL: MIS PEDIDOS (con carga dinámica)
+    ========================================== -->
     <div class="modal fade" id="pedidosModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -187,15 +257,26 @@
                     <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i>Historial de Pedidos</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4 text-center">
-                    <i class="fas fa-receipt fa-4x text-muted opacity-25 mb-3"></i>
-                    <h5 class="text-muted">Aún no has realizado ninguna compra.</h5>
-                    <p>¡Tus próximos tickets aparecerán aquí!</p>
+                <div class="modal-body p-4" id="cuerpo-pedidos-modal">
+                    <!-- Contenido cargado dinámicamente por JS -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-2x text-success mb-3"></i>
+                        <p class="text-muted">Cargando tus pedidos...</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <a href="/cliente/historial" class="btn btn-outline-success rounded-pill fw-bold px-4">
+                        <i class="fas fa-external-link-alt me-2"></i>Ver página completa
+                    </a>
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- ==========================================
+         TOAST DE NOTIFICACIONES
+    ========================================== -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
         <div id="toastCarrito" class="toast align-items-center text-bg-success border-0 shadow-lg" role="alert" style="border-radius: 10px;">
             <div class="d-flex">
@@ -210,7 +291,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // Función para enviar al usuario al login si intenta interactuar sin sesión
         function requiereLogin() {
             alert("Para poder comprar, por favor inicia sesión o crea una cuenta gratis.");
             window.location.href = "/login";

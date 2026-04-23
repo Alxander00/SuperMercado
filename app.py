@@ -18,7 +18,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "supermercado",
     "user": "postgres",
-    "password": "123" 
+    "password": "1234567890" 
 }
 
 # Esto es para que el HTML pueda usar max() y min() en la paginación
@@ -60,16 +60,26 @@ def generar_pdf_documento(titulo, encabezados, filas, nombre_archivo, mostrar_to
     y -= 25
     
     c.setFont("Helvetica", 10)
-    suma_total = 0 
+    suma_total = 0
 
     for fila in filas:
         for i, item in enumerate(fila):
             if i < len(x_positions):
-                c.drawString(x_positions[i], y, str(item))
-        
+                # Convertir Decimal/float a string legible con formato monetario
+                try:
+                    valor = float(item)
+                    # Si es la columna de precio o subtotal (índices 2 y 3), formatear con $
+                    if i >= 2:
+                        texto = f"${valor:,.2f}"
+                    else:
+                        texto = str(item)
+                except (ValueError, TypeError):
+                    texto = str(item)
+                c.drawString(x_positions[i], y, texto)
+
         try:
             suma_total += float(fila[-1])
-        except:
+        except (ValueError, TypeError):
             pass
 
         y -= 20
@@ -234,8 +244,8 @@ def vista_ventas():
     total_ventas = cursor.fetchone()[0]
     total_pages = (total_ventas + per_page - 1) // per_page
     cursor.execute("""
-        SELECT v.id_venta, u.nombre, v.fecha::date, v.total 
-        FROM ventas v JOIN usuarios u ON v.id_usuario = u.id_usuario 
+        SELECT v.id_venta, COALESCE(u.nombre, v.cliente, 'Simulado') as nombre_cliente, v.fecha::date, v.total 
+        FROM ventas v LEFT JOIN usuarios u ON v.id_usuario = u.id_usuario 
         ORDER BY v.id_venta DESC LIMIT %s OFFSET %s
     """, (per_page, offset))
     ventas = cursor.fetchall()
@@ -249,7 +259,16 @@ def vista_ventas():
 def historial_cliente():
     if 'id_usuario' not in session: return redirect(url_for('login'))
     conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
-    cursor.execute("SELECT id_venta, fecha::date, total FROM ventas WHERE id_usuario = %s ORDER BY fecha DESC", (session['id_usuario'],))
+    # Solo ventas con id_usuario real + que tengan al menos 1 item en detalle_ventas
+    cursor.execute("""
+        SELECT v.id_venta, v.fecha::date, v.total, COUNT(d.id_detalle) as items
+        FROM ventas v
+        JOIN detalle_ventas d ON v.id_venta = d.id_venta
+        WHERE v.id_usuario = %s
+        GROUP BY v.id_venta, v.fecha, v.total
+        HAVING COUNT(d.id_detalle) > 0
+        ORDER BY v.fecha DESC
+    """, (session['id_usuario'],))
     pedidos = cursor.fetchall()
     cursor.close(); conexion.close()
     return render_template('historial.html', pedidos=pedidos, nombre_usuario=session['nombre'])
@@ -258,30 +277,100 @@ def historial_cliente():
 def descargar_ticket(id_venta):
     if 'id_usuario' not in session: return redirect(url_for('login'))
     conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
+    # Solo permite descargar tickets de compras propias con detalle real
     cursor.execute("""
-        SELECT p.nombre, d.cantidad, d.precio_unitario, d.subtotal 
-        FROM detalle_ventas d JOIN productos p ON d.id_producto = p.id_producto 
+        SELECT v.id_venta FROM ventas v
+        JOIN detalle_ventas d ON v.id_venta = d.id_venta
+        WHERE v.id_venta = %s AND v.id_usuario = %s
+        LIMIT 1
+    """, (id_venta, session['id_usuario']))
+    if not cursor.fetchone():
+        cursor.close(); conexion.close()
+        return "Ticket no encontrado o sin permiso.", 404
+    cursor.execute("""
+        SELECT p.nombre, 
+               d.cantidad, 
+               CAST(d.precio_unitario AS FLOAT), 
+               CAST(d.subtotal AS FLOAT)
+        FROM detalle_ventas d 
+        JOIN productos p ON d.id_producto = p.id_producto 
         WHERE d.id_venta = %s
+        ORDER BY p.nombre ASC
     """, (id_venta,))
     detalles = cursor.fetchall()
     cursor.close(); conexion.close()
-    headers = ["Producto", "Cant.", "Precio U.", "Subtotal"]
-    return generar_pdf_documento(f"TICKET DE COMPRA #{id_venta}", headers, detalles, f"ticket_{id_venta}.pdf")
+    headers = ["Producto", "Cant.", "Precio Unit.", "Subtotal"]
+    return generar_pdf_documento(f"TICKET DE COMPRA #{id_venta}", headers, detalles, f"ticket_{id_venta}.pdf", mostrar_total=True)
 
 # ==========================================
 # 5. RUTAS API (DATOS Y GRÁFICOS)
 # ==========================================
+@app.route('/api/mis_pedidos')
+def api_mis_pedidos():
+    """Endpoint que usa el modal de historial en la tienda (main.js)."""
+    if 'id_usuario' not in session:
+        return jsonify({'mensaje': 'Error', 'error': 'No autenticado'}), 401
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    try:
+        conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
+        # Total de pedidos reales con detalle
+        cursor.execute("""
+            SELECT COUNT(DISTINCT v.id_venta)
+            FROM ventas v
+            JOIN detalle_ventas d ON v.id_venta = d.id_venta
+            WHERE v.id_usuario = %s
+        """, (session['id_usuario'],))
+        total = cursor.fetchone()[0]
+        # Pedidos paginados con conteo de items
+        cursor.execute("""
+            SELECT v.id_venta, v.fecha::date, v.total, COUNT(d.id_detalle) as items
+            FROM ventas v
+            JOIN detalle_ventas d ON v.id_venta = d.id_venta
+            WHERE v.id_usuario = %s
+            GROUP BY v.id_venta, v.fecha, v.total
+            ORDER BY v.fecha DESC
+            LIMIT %s OFFSET %s
+        """, (session['id_usuario'], per_page, offset))
+        filas = cursor.fetchall()
+        cursor.close(); conexion.close()
+        pedidos = [
+            {'id': f[0], 'fecha': str(f[1]), 'total': float(f[2]), 'items': f[3]}
+            for f in filas
+        ]
+        return jsonify({
+            'mensaje': 'Éxito',
+            'pedidos': pedidos,
+            'total': total,
+            'pagina': page,
+            'total_paginas': (total + per_page - 1) // per_page if total > 0 else 1
+        })
+    except Exception as e:
+        return jsonify({'mensaje': 'Error', 'error': str(e)}), 500
+
+
 @app.route('/api/resumen_ventas')
 def resumen_ventas():
     try:
         conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
-        cursor.execute("SELECT COUNT(*) as total_filas, SUM(total) as gran_total, AVG(total) as precio_promedio FROM ventas")
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_ventas,
+                SUM(total) as gran_total,
+                AVG(total) as precio_promedio,
+                COUNT(*) FILTER (WHERE id_usuario IS NOT NULL) as ventas_reales,
+                COUNT(*) FILTER (WHERE id_usuario IS NULL) as ventas_simuladas
+            FROM ventas
+        """)
         res = cursor.fetchone()
         cursor.close(); conexion.close()
         return jsonify({'mensaje': 'Éxito', 'datos': {
-            'total_registros': res[0], 
-            'ingresos_totales': float(res[1]) if res[1] else 0, 
-            'precio_promedio': round(float(res[2]), 2) if res[2] else 0
+            'total_registros': res[0],
+            'ingresos_totales': float(res[1]) if res[1] else 0,
+            'precio_promedio': round(float(res[2]), 2) if res[2] else 0,
+            'ventas_reales': res[3],
+            'ventas_simuladas': res[4]
         }})
     except Exception as e:
         return jsonify({'mensaje': 'Error', 'error': str(e)})
@@ -320,16 +409,129 @@ def grafico_tendencias():
         datos = cursor.fetchall()
         df = pd.DataFrame(datos, columns=['categoria', 'total_ventas'])
         cursor.close(); conexion.close()
+
         plt.rcParams['font.family'] = 'sans-serif'
-        fig, ax = plt.subplots(figsize=(8, 4.5))
-        colores = ['#16a34a', '#22c55e', '#4ade80', '#f97316', '#fb923c']
+        colores = ['#16a34a', '#22c55e', '#4ade80', '#f97316', '#fb923c',
+                   '#16a34a', '#22c55e', '#4ade80', '#f97316', '#fb923c']
+
         if tipo == 'pastel':
-            ax.pie(df['total_ventas'], labels=df['categoria'], autopct='%1.1f%%', colors=colores, startangle=90)
-        else:
-            ax.bar(df['categoria'], df['total_ventas'], color=colores[:len(df)])
+            # --- PASTEL: leyenda lateral, sin labels solapados ---
+            fig, ax = plt.subplots(figsize=(9, 5))
+            wedges, texts, autotexts = ax.pie(
+                df['total_ventas'], labels=None,
+                autopct='%1.1f%%', colors=colores[:len(df)],
+                startangle=90, pctdistance=0.75
+            )
+            ax.legend(wedges, df['categoria'],
+                      loc='center left', bbox_to_anchor=(1, 0, 0.4, 1), fontsize=9)
+
+        elif tipo == 'lineal':
+            # --- LINEAL: ingresos diarios últimos 30 días ---
+            fig, ax = plt.subplots(figsize=(10, 5))
+            conexion2 = psycopg2.connect(**DB_CONFIG); cursor2 = conexion2.cursor()
+            cursor2.execute("""
+                SELECT DATE(v.fecha) as dia, SUM(d.subtotal) as total_dia
+                FROM ventas v
+                JOIN detalle_ventas d ON v.id_venta = d.id_venta
+                WHERE v.fecha >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY dia ORDER BY dia ASC
+            """)
+            datos_linea = cursor2.fetchall()
+            cursor2.close(); conexion2.close()
+            if datos_linea:
+                df_linea = pd.DataFrame(datos_linea, columns=['dia', 'total_dia'])
+                ax.plot(df_linea['dia'], df_linea['total_dia'],
+                        color='#16a34a', linewidth=2.5, marker='o', markersize=4)
+                ax.fill_between(df_linea['dia'], df_linea['total_dia'], alpha=0.15, color='#16a34a')
+                ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('${x:,.0f}'))
+                ax.set_xlabel('Fecha', fontsize=9)
+                ax.set_title('Ingresos diarios - últimos 30 días', fontsize=10, pad=10)
+                ax.grid(axis='y', linestyle='--', alpha=0.4)
+                plt.xticks(rotation=45, ha='right', fontsize=8)
+            else:
+                ax.text(0.5, 0.5, 'Sin datos en los últimos 30 días',
+                        ha='center', va='center', transform=ax.transAxes, fontsize=11)
+
+        elif tipo == 'top_productos':
+            # --- TOP 10 PRODUCTOS MÁS VENDIDOS (barras horizontales) ---
+            fig, ax = plt.subplots(figsize=(10, 6))
+            conexion2 = psycopg2.connect(**DB_CONFIG); cursor2 = conexion2.cursor()
+            cursor2.execute("""
+                SELECT p.nombre, SUM(d.cantidad) as total_unidades
+                FROM detalle_ventas d
+                JOIN productos p ON d.id_producto = p.id_producto
+                GROUP BY p.nombre
+                ORDER BY total_unidades DESC
+                LIMIT 10
+            """)
+            datos_top = cursor2.fetchall()
+            cursor2.close(); conexion2.close()
+            if datos_top:
+                df_top = pd.DataFrame(datos_top, columns=['producto', 'unidades'])
+                df_top = df_top.sort_values('unidades', ascending=True)  # invertir para que el mayor quede arriba
+                bars = ax.barh(df_top['producto'], df_top['unidades'],
+                               color=colores[:len(df_top)], height=0.6, zorder=2)
+                # Etiqueta de valor al final de cada barra
+                for bar, val in zip(bars, df_top['unidades']):
+                    ax.text(bar.get_width() + (bar.get_width() * 0.01),
+                            bar.get_y() + bar.get_height() / 2,
+                            f'{int(val):,}', va='center', fontsize=8, color='#333')
+                ax.set_xlabel('Unidades vendidas', fontsize=9)
+                ax.set_title('Top 10 productos más vendidos', fontsize=10, pad=10)
+                ax.grid(axis='x', linestyle='--', alpha=0.4, zorder=1)
+                ax.set_axisbelow(True)
+                ax.tick_params(axis='y', labelsize=9)
+                ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+
+        elif tipo == 'calor':
+            # --- MAPA DE CALOR: ventas por día de semana y hora ---
+            import numpy as np
+            fig, ax = plt.subplots(figsize=(11, 5))
+            conexion2 = psycopg2.connect(**DB_CONFIG); cursor2 = conexion2.cursor()
+            cursor2.execute("""
+                SELECT EXTRACT(DOW FROM v.fecha)::INT  as dia_semana,
+                       EXTRACT(HOUR FROM v.fecha)::INT as hora,
+                       COUNT(*) as num_ventas
+                FROM ventas v
+                WHERE v.fecha >= CURRENT_DATE - INTERVAL '90 days'
+                GROUP BY dia_semana, hora
+                ORDER BY dia_semana, hora
+            """)
+            datos_calor = cursor2.fetchall()
+            cursor2.close(); conexion2.close()
+            if datos_calor:
+                # Construir matriz 7 dias x 24 horas
+                matriz = np.zeros((7, 24))
+                for dia, hora, cnt in datos_calor:
+                    if 0 <= dia <= 6 and 0 <= hora <= 23:
+                        matriz[dia][hora] = cnt
+                dias_labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+                im = ax.imshow(matriz, cmap='Greens', aspect='auto')
+                ax.set_xticks(range(24))
+                ax.set_xticklabels([f'{h:02d}h' for h in range(24)], fontsize=7, rotation=45)
+                ax.set_yticks(range(7))
+                ax.set_yticklabels(dias_labels, fontsize=9)
+                ax.set_title('Mapa de calor: ventas por día y hora (últimos 90 días)', fontsize=10, pad=10)
+                ax.set_xlabel('Hora del día', fontsize=9)
+                plt.colorbar(im, ax=ax, label='Nº ventas', shrink=0.8)
+            else:
+                ax.text(0.5, 0.5, 'Sin datos suficientes',
+                        ha='center', va='center', transform=ax.transAxes, fontsize=11)
+
+        else:  # barras (default)
+            # --- BARRAS VERTICALES POR CATEGORÍA ---
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.bar(range(len(df)), df['total_ventas'], color=colores[:len(df)], width=0.6, zorder=2)
+            ax.set_xticks(range(len(df)))
+            ax.set_xticklabels(df['categoria'], rotation=40, ha='right', fontsize=9)
             ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('${x:,.0f}'))
+            ax.grid(axis='y', linestyle='--', alpha=0.4, zorder=1)
+            ax.set_axisbelow(True)
+
         plt.tight_layout()
-        img = io.BytesIO(); plt.savefig(img, format='png', transparent=True); img.seek(0); plt.close()
+        img = io.BytesIO()
+        plt.savefig(img, format='png', transparent=True, bbox_inches='tight', dpi=110)
+        img.seek(0); plt.close()
         return jsonify({'mensaje': 'Éxito', 'imagen': base64.b64encode(img.getvalue()).decode('utf8')})
     except Exception as e:
         return jsonify({'mensaje': 'Error', 'error': str(e)})

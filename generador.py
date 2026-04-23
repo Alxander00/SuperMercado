@@ -6,7 +6,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "supermercado",
     "user": "postgres",
-    "password": "123"
+    "password": "1234567890"
 }
 
 def poblar():

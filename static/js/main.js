@@ -18,42 +18,54 @@ function cargarNumeros() {
 function renderizarGrafico(tipo) {
     const contenedor = document.getElementById('contenedor-grafico');
     if (!contenedor) return;
-    contenedor.innerHTML = `<div class="p-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-success"></i><p>Calculando matrices...</p></div>`;
+
+    // Mensajes de carga según tipo de gráfico
+    const mensajes = {
+        'barras':        'Calculando ventas por categoría...',
+        'pastel':        'Preparando distribución...',
+        'lineal':        'Trazando tendencia de 30 días...',
+        'top_productos': 'Buscando los productos estrella...',
+        'calor':         'Construyendo mapa de calor...'
+    };
+    const msg = mensajes[tipo] || 'Cargando gráfico...';
+
+    contenedor.innerHTML = `
+        <div class="p-5 text-center text-muted">
+            <i class="fas fa-spinner fa-spin fa-2x mb-2 text-success"></i>
+            <p>${msg}</p>
+        </div>`;
+
     fetch(`/api/grafico_tendencias?tipo=${tipo}`)
         .then(response => response.json())
         .then(data => {
-            if(data.mensaje === 'Éxito') {
-                contenedor.innerHTML = `<img src="data:image/png;base64,${data.imagen}" class="img-fluid" style="max-height: 350px;" alt="Gráfico">`;
+            if (data.mensaje === 'Éxito') {
+                // Altura dinámica según tipo
+                const alturas = { 'calor': '420px', 'top_productos': '380px' };
+                const altura = alturas[tipo] || '350px';
+                contenedor.innerHTML = `<img src="data:image/png;base64,${data.imagen}" class="img-fluid w-100" style="max-height:${altura}; object-fit:contain;" alt="Gráfico">`;
             } else {
-                contenedor.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                contenedor.innerHTML = `<p class="text-danger text-center py-4"><i class="fas fa-exclamation-circle me-2"></i>Error: ${data.error}</p>`;
             }
+        })
+        .catch(() => {
+            contenedor.innerHTML = `<p class="text-danger text-center py-4">No se pudo conectar con el servidor.</p>`;
         });
 }
 
 // ==========================================
-// 2. CARRITO Y COMPRAS (CON CANTIDADES)
-// ==========================================
-// ==========================================
 // 2. CARRITO Y COMPRAS (CON LÍMITE DE STOCK)
-// ==========================================
-// ==========================================
-// 2. CARRITO Y COMPRAS (ACTUALIZACIÓN EN VIVO)
 // ==========================================
 let carrito = [];
 
 function mostrarToast(mensaje, tipo = 'success') {
     const toastEl = document.getElementById('toastCarrito');
     const mensajeEl = document.getElementById('toast-mensaje');
-    
-    // Cambiar el color de la notificación según si es éxito o error
     toastEl.className = `toast align-items-center text-bg-${tipo} border-0 shadow-lg animate__animated animate__fadeInUp`;
     mensajeEl.innerText = mensaje;
-    
     const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
     toast.show();
 }
 
-// NUEVO: Lee el stock directamente de la tarjeta en tiempo real
 function obtenerStockActual(id) {
     const input = document.getElementById(`cant-${id}`);
     if (!input) return 0;
@@ -63,10 +75,8 @@ function obtenerStockActual(id) {
 function cambiarCantidad(id, delta) {
     let input = document.getElementById(`cant-${id}`);
     if (!input) return;
-    
-    let maxStock = obtenerStockActual(id); // Calculamos el stock al instante
+    let maxStock = obtenerStockActual(id);
     let nueva = parseInt(input.value) + delta;
-    
     if (nueva >= 1 && nueva <= maxStock) {
         input.value = nueva;
     } else if (nueva > maxStock) {
@@ -82,7 +92,6 @@ function agregarAlCarrito(id, nombre, precio) {
     let productoExistente = carrito.find(item => item.id === id);
     let cantidadTotalDeseada = productoExistente ? productoExistente.cantidad + cantidadAAgregar : cantidadAAgregar;
 
-    // Validación estricta
     if (cantidadTotalDeseada > maxStock) {
         mostrarToast(`No puedes agregar ${cantidadAAgregar} más. Stock límite: ${maxStock}`, 'danger');
         return;
@@ -94,25 +103,24 @@ function agregarAlCarrito(id, nombre, precio) {
     } else {
         carrito.push({ id: id, nombre: nombre, precio: parseFloat(precio), cantidad: cantidadAAgregar, subtotal: parseFloat(precio) * cantidadAAgregar });
     }
-    
+
     actualizarVistaCarrito();
     mostrarToast(`Agregaste ${cantidadAAgregar}x ${nombre}`, 'success');
 
-    // Animar el ícono del carrito en el Navbar
     const botonCarrito = document.getElementById('btn-carrito-nav');
     if(botonCarrito) {
         botonCarrito.classList.remove('animate__animated', 'animate__rubberBand');
         setTimeout(() => botonCarrito.classList.add('animate__animated', 'animate__rubberBand'), 10);
     }
 
-    if (inputCant) inputCant.value = 1; 
+    if (inputCant) inputCant.value = 1;
 }
 
 function actualizarVistaCarrito() {
     const lista = document.getElementById('lista-carrito');
-    if (!lista) return; 
+    if (!lista) return;
 
-    lista.innerHTML = ''; 
+    lista.innerHTML = '';
     let granTotal = 0, cantidadTotal = 0;
 
     if (carrito.length === 0) {
@@ -131,48 +139,80 @@ function actualizarVistaCarrito() {
                 </li>`;
         });
     }
-    
+
     const contador = document.getElementById('contador-carrito');
     if (contador) contador.innerText = cantidadTotal;
-    
+
     const totalTexto = document.getElementById('total-carrito');
     if (totalTexto) totalTexto.innerText = '$' + granTotal.toFixed(2);
 }
 
+// ==========================================
+// DESCARGA AUTOMÁTICA DEL TICKET PDF
+// ==========================================
+function descargarTicketAutomatico(idVenta) {
+    // Crear un enlace invisible, dispararlo y eliminarlo
+    const enlace = document.createElement('a');
+    enlace.href = `/cliente/descargar_ticket/${idVenta}`;
+    enlace.download = `ticket_${idVenta}.pdf`;
+    document.body.appendChild(enlace);
+    enlace.click();
+    document.body.removeChild(enlace);
+}
+
+function mostrarModalExito(idVenta) {
+    // Rellenar datos del modal de éxito
+    const numTicket = document.getElementById('modal-num-ticket');
+    const btnDescargar = document.getElementById('btn-descargar-ticket');
+
+    if (numTicket) numTicket.innerText = `#${idVenta}`;
+    if (btnDescargar) btnDescargar.href = `/cliente/descargar_ticket/${idVenta}`;
+
+    // Ocultar modal del carrito y mostrar modal de éxito
+    const modalCarrito = bootstrap.Modal.getInstance(document.getElementById('carritoModal'));
+    if (modalCarrito) modalCarrito.hide();
+
+    const modalExito = new bootstrap.Modal(document.getElementById('modalCompraExitosa'));
+    modalExito.show();
+}
+
 function procesarCompra() {
     if (carrito.length === 0) return alert("Tu carrito está vacío.");
-    
+
+    // Deshabilitar botón para evitar doble clic
+    const btnPagar = document.getElementById('btn-pagar');
+    if (btnPagar) {
+        btnPagar.disabled = true;
+        btnPagar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+    }
+
     fetch('/api/comprar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(carrito) 
+        body: JSON.stringify(carrito)
     })
     .then(r => r.json())
     .then(data => {
-        if(data.mensaje === 'Éxito') {
-            
-            // ¡MAGIA VISUAL!: RESTAR EL STOCK DE LA PANTALLA
+        if (data.mensaje === 'Éxito') {
+
+            // Actualizar stock visual en las tarjetas
             carrito.forEach(item => {
                 let tarjeta = document.getElementById(`cant-${item.id}`)?.closest('.tarjeta-producto');
-                if(tarjeta) {
+                if (tarjeta) {
                     let stockActual = parseInt(tarjeta.getAttribute('data-stock'));
                     let nuevoStock = stockActual - item.cantidad;
 
-                    // 1. Actualizamos el dato oculto
                     tarjeta.setAttribute('data-stock', nuevoStock);
 
-                    // 2. Actualizamos el texto de "Stock: XX"
                     let badgeStock = document.getElementById(`disp-${item.id}`);
-                    if(badgeStock) badgeStock.innerText = nuevoStock;
+                    if (badgeStock) badgeStock.innerText = nuevoStock;
 
-                    // 3. Ajustamos el límite del botón "+"
                     let inputCant = document.getElementById(`cant-${item.id}`);
-                    if(inputCant) inputCant.setAttribute('max', nuevoStock);
+                    if (inputCant) inputCant.setAttribute('max', nuevoStock);
 
-                    // 4. Si llegó a Cero, transformamos los botones en el letrero de "¡Agotado!"
-                    if(nuevoStock <= 0) {
-                        let controlesDiv = inputCant.closest('.mt-auto');
-                        if(controlesDiv) {
+                    if (nuevoStock <= 0) {
+                        let controlesDiv = inputCant?.closest('.mt-auto');
+                        if (controlesDiv) {
                             controlesDiv.innerHTML = `
                                 <div class="alert alert-danger py-2 mb-0 fw-bold rounded-pill" role="alert">
                                     <i class="fas fa-times-circle me-1"></i> ¡Agotado!
@@ -183,12 +223,82 @@ function procesarCompra() {
                 }
             });
 
-            alert(`¡Compra Exitosa! Ticket #${data.id_venta}`);
-            carrito = []; 
+            // ✅ DESCARGA AUTOMÁTICA DEL TICKET PDF
+            descargarTicketAutomatico(data.id_venta);
+
+            // Limpiar carrito
+            carrito = [];
             actualizarVistaCarrito();
-            bootstrap.Modal.getInstance(document.getElementById('carritoModal')).hide();
-        } else { alert("Error: " + data.error); }
+
+            // Mostrar modal de compra exitosa
+            mostrarModalExito(data.id_venta);
+
+        } else {
+            alert("Error al procesar la compra: " + data.error);
+            if (btnPagar) {
+                btnPagar.disabled = false;
+                btnPagar.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pagar';
+            }
+        }
+    })
+    .catch(() => {
+        alert("Error de conexión. Intenta nuevamente.");
+        if (btnPagar) {
+            btnPagar.disabled = false;
+            btnPagar.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pagar';
+        }
     });
+}
+
+// ==========================================
+// HISTORIAL DE PEDIDOS EN MODAL
+// ==========================================
+function cargarHistorialModal() {
+    const cuerpo = document.getElementById('cuerpo-pedidos-modal');
+    if (!cuerpo) return;
+
+    cuerpo.innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x text-success mb-3"></i>
+            <p class="text-muted">Cargando tus pedidos...</p>
+        </div>`;
+
+    fetch('/api/mis_pedidos')
+        .then(r => r.json())
+        .then(data => {
+            if (data.mensaje === 'Éxito' && data.pedidos.length > 0) {
+                let html = '<div class="row g-3">';
+                data.pedidos.forEach(p => {
+                    html += `
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm rounded-4 p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle mb-1">Pedido #${p.id}</span>
+                                        <h6 class="fw-bold mb-0">${p.fecha}</h6>
+                                        <span class="text-success fw-bold fs-5">$${parseFloat(p.total).toFixed(2)}</span>
+                                    </div>
+                                    <a href="/cliente/descargar_ticket/${p.id}" class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm">
+                                        <i class="fas fa-file-pdf me-1 text-danger"></i> Ticket PDF
+                                    </a>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+                html += '</div>';
+                cuerpo.innerHTML = html;
+            } else {
+                cuerpo.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-receipt fa-4x text-muted opacity-25 mb-3"></i>
+                        <h5 class="text-muted">Aún no has realizado ninguna compra.</h5>
+                        <p class="text-muted small">¡Tus próximos tickets aparecerán aquí!</p>
+                    </div>`;
+            }
+        })
+        .catch(() => {
+            cuerpo.innerHTML = `<p class="text-danger text-center py-4">No se pudo cargar el historial.</p>`;
+        });
 }
 
 // ==========================================
@@ -216,7 +326,7 @@ function aplicarFiltros() {
     if(labelPrecio) labelPrecio.innerText = `$${precioMax.toFixed(2)}`;
 
     let visibles = 0;
-    
+
     document.querySelectorAll('.tarjeta-producto').forEach(tarjeta => {
         const tNombre = (tarjeta.getAttribute('data-nombre') || "").toLowerCase();
         const tCategoria = tarjeta.getAttribute('data-categoria') || "";
@@ -250,8 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selector) selector.addEventListener('change', (e) => renderizarGrafico(e.target.value));
 
     actualizarVistaCarrito();
-    
-    // Asignar eventos a la barra lateral
+
     const buscador = document.getElementById('filtro-texto');
     const comboCat = document.getElementById('filtro-categoria');
     const rangoPrecio = document.getElementById('filtro-precio');
@@ -259,4 +368,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (buscador) buscador.addEventListener('input', aplicarFiltros);
     if (comboCat) comboCat.addEventListener('change', aplicarFiltros);
     if (rangoPrecio) rangoPrecio.addEventListener('input', aplicarFiltros);
+
+    // Cargar historial cuando se abre el modal de pedidos
+    const modalPedidos = document.getElementById('pedidosModal');
+    if (modalPedidos) {
+        modalPedidos.addEventListener('show.bs.modal', cargarHistorialModal);
+    }
+
+    // Re-habilitar botón pagar al cerrar el modal del carrito
+    const modalCarrito = document.getElementById('carritoModal');
+    if (modalCarrito) {
+        modalCarrito.addEventListener('hidden.bs.modal', () => {
+            const btnPagar = document.getElementById('btn-pagar');
+            if (btnPagar) {
+                btnPagar.disabled = false;
+                btnPagar.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pagar';
+            }
+        });
+    }
 });
