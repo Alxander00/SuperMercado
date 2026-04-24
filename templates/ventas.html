@@ -16,6 +16,20 @@
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-md-5"> <form action="/ventas" method="GET" class="d-flex gap-2">
+                <input type="number" name="search_id" class="form-control rounded-pill border-0 shadow-sm ps-3" 
+                       placeholder="Buscar por ID de venta..." value="{{ search_id if search_id }}">
+                <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
+                    <i class="fas fa-search"></i>
+                </button>
+                {% if search_id %}
+                    <a href="/ventas" class="btn btn-outline-secondary rounded-pill shadow-sm">Limpiar</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table admin-table align-middle" style="border-collapse: separate; border-spacing: 0 10px;">
             <thead class="text-muted small fw-bold">
@@ -35,7 +49,9 @@
                     <td>{{ v[2] }}</td>
                     <td class="text-success fw-bold fs-5">${{ v[3] }}</td>
                     <td class="text-center" style="border-radius: 0 15px 15px 0;">
-                        <button class="btn btn-light btn-sm rounded-circle"><i class="fas fa-eye text-primary"></i></button>
+                        <a target="_blank" href="{{ url_for('admin_descargar_ticket', id_venta=v[0]) }}" class="btn btn-light btn-sm rounded-circle shadow-sm" title="Ver Ticket en PDF">
+                            <i class="fas fa-eye text-primary"></i>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -43,6 +59,7 @@
         </table>
     </div>
 
+    {% if not search_id %}
     <nav class="mt-4">
         <ul class="pagination justify-content-center">
             <li class="page-item {{ 'disabled' if page == 1 }}">
@@ -61,5 +78,6 @@
         </ul>
         <p class="text-center text-muted small mt-2">Página {{ page }} de {{ total_pages }}</p>
     </nav>
+    {% endif %}
 </div>
 {% endblock %}

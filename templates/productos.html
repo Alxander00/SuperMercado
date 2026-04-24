@@ -3,7 +3,7 @@
 <div class="container-fluid">
     <h2 class="fw-bold mb-4">Gestión de Inventario</h2>
 
-    <div class="admin-card-form mb-5">
+    <div class="admin-card-form mb-4">
         <h5 class="fw-bold text-success mb-4"><i class="fas fa-plus-circle me-2"></i>Publicar Producto Nuevo</h5>
         <form action="/productos" method="POST" class="row g-3">
             <div class="col-md-4">
@@ -30,6 +30,42 @@
         </form>
     </div>
 
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+        <div class="card-body p-3">
+            <form action="/productos" method="GET" class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 rounded-start-pill"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0 rounded-end-pill shadow-none" placeholder="Buscar producto por nombre..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="categoria" class="form-select rounded-pill shadow-none">
+                        <option value="todas">Todas las categorías</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat[0] }}" {% if cat_filter|string == cat[0]|string %}selected{% endif %}>
+                                {{ cat[1] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill fw-bold"><i class="fas fa-filter me-2"></i>Filtrar</button>
+                    {% if search_query or cat_filter != 'todas' %}
+                        <a href="/productos" class="btn btn-outline-danger rounded-pill" title="Limpiar Filtros"><i class="fas fa-times"></i></a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if productos|length == 0 %}
+    <div class="alert alert-warning rounded-4 text-center py-4">
+        <i class="fas fa-box-open fa-2x mb-2 text-warning"></i>
+        <h5 class="fw-bold mb-0">No se encontraron productos</h5>
+        <p class="text-muted small">Intenta buscar con otro nombre o cambia la categoría.</p>
+    </div>
+    {% else %}
     <div class="table-responsive">
         <table class="table admin-table align-middle">
             <thead class="text-muted">
@@ -41,12 +77,28 @@
                     <td class="fw-bold">{{ p[1] }}</td>
                     <td><span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ p[3] }}</span></td>
                     <td class="text-success fw-bold fs-5">${{ p[2] }}</td>
-                    <td>{{ p[4] }} unidades</td>
-                    <td><a href="/productos/eliminar/{{ p[0] }}" class="btn btn-light text-danger btn-sm rounded-circle"><i class="fas fa-trash"></i></a></td>
+                    <td>
+                        {% if p[4] <= 5 %}
+                            <span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>{{ p[4] }} unidades (Bajo)</span>
+                        {% else %}
+                            {{ p[4] }} unidades
+                        {% endif %}
+                    </td>
+                    <td style="border-radius: 0 15px 15px 0;">
+                        <a href="{{ url_for('editar_producto', id=p[0]) }}" class="btn btn-light btn-sm text-primary rounded-circle shadow-sm me-2">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{{ url_for('eliminar_producto', id=p[0]) }}" 
+                           class="btn btn-light btn-sm text-danger rounded-circle shadow-sm"
+                           onclick="return confirm('¿Seguro que quieres eliminar este producto?')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

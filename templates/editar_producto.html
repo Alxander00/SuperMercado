@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/productos" class="btn btn-outline-secondary rounded-pill me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="fw-bold m-0">Editar Producto: {{ producto[1] }}</h2>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4" style="max-width: 600px;">
+        <form action="{{ url_for('editar_producto', id=producto[0]) }}" method="POST">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nombre</label>
+                <input type="text" name="nombre" class="form-control rounded-pill" value="{{ producto[1] }}" required>
+            </div>
+            <div class="row mb-3">
+                <div class="col">
+                    <label class="form-label fw-bold">Precio ($)</label>
+                    <input type="number" step="0.01" name="precio_base" class="form-control rounded-pill" value="{{ producto[2] }}" required>
+                </div>
+                <div class="col">
+                    <label class="form-label fw-bold">Stock</label>
+                    <input type="number" name="stock" class="form-control rounded-pill" value="{{ producto[4] }}" required>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">Categoría</label>
+                <select name="id_categoria" class="form-select rounded-pill">
+                    {% for cat in categorias %}
+                        <option value="{{ cat[0] }}" {% if cat[0] == producto[3] %}selected{% endif %}>
+                            {{ cat[1] }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold py-2">
+                <i class="fas fa-save me-2"></i>Guardar Cambios
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

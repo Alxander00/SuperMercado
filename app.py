@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, send_file
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, send_file, flash
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -18,7 +18,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "supermercado",
     "user": "postgres",
-    "password": "1234567890" 
+    "password": "123" 
 }
 
 # Esto es para que el HTML pueda usar max() y min() en la paginación
@@ -118,25 +118,23 @@ def portada():
 
 @app.route('/tienda')
 def catalogo_cliente():
-    conexion = psycopg2.connect(**DB_CONFIG)
-    cursor = conexion.cursor()
+    conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
     cursor.execute("SELECT nombre FROM categorias ORDER BY nombre ASC")
     categorias = cursor.fetchall()
     
+    # IMPORTANTE: Agregamos "WHERE p.activo = TRUE"
     cursor.execute("""
         SELECT p.id_producto, p.nombre, p.precio_base, c.nombre, p.stock 
         FROM productos p
         JOIN categorias c ON p.id_categoria = c.id_categoria
+        WHERE p.activo = TRUE
         ORDER BY p.id_producto ASC
     """)
     productos = cursor.fetchall()
-    cursor.close()
-    conexion.close()
+    cursor.close(); conexion.close()
+    return render_template('tienda.html', productos=productos, categorias=categorias, 
+                           nombre_usuario=session.get('nombre', 'Invitado'), logueado='id_usuario' in session)
     
-    nombre = session.get('nombre', 'Invitado')
-    esta_logueado = 'id_usuario' in session 
-    return render_template('tienda.html', productos=productos, categorias=categorias, nombre_usuario=nombre, logueado=esta_logueado)
-
 # ==========================================
 # 2. RUTAS DE AUTENTICACIÓN
 # ==========================================
@@ -178,7 +176,8 @@ def login():
             session['rol'] = usuario[2]
             return redirect(url_for('index' if usuario[2] == 'admin' else 'portada'))
         else:
-            return "Credenciales incorrectas. <a href='/login'>Intentar de nuevo</a>"
+            flash("Credenciales incorrectas. Revisa tu correo o contraseña.", "danger")
+            return redirect(url_for('login'))
     return render_template('login.html')
 
 @app.route('/logout')
@@ -220,37 +219,105 @@ def reporte_ventas_pdf(periodo):
 def vista_productos():
     if session.get('rol') != 'admin': return redirect('/')
     conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
+    
     if request.method == 'POST':
-        cursor.execute("INSERT INTO productos (nombre, precio_base, id_categoria, stock) VALUES (%s, %s, %s, %s)", 
+        cursor.execute("INSERT INTO productos (nombre, precio_base, id_categoria, stock, activo) VALUES (%s, %s, %s, %s, TRUE)", 
                        (request.form['nombre'], request.form['precio_base'], request.form['id_categoria'], request.form['stock']))
         conexion.commit()
         return redirect(url_for('vista_productos'))
-    cursor.execute("SELECT p.id_producto, p.nombre, p.precio_base, c.nombre, p.stock FROM productos p JOIN categorias c ON p.id_categoria = c.id_categoria ORDER BY p.id_producto DESC")
+
+    search_query = request.args.get('search', '')
+    cat_filter = request.args.get('categoria', 'todas')
+    
+    # Agregamos "AND p.activo = TRUE" a la consulta base
+    sql = """
+        SELECT p.id_producto, p.nombre, p.precio_base, c.nombre, p.stock, c.id_categoria 
+        FROM productos p 
+        JOIN categorias c ON p.id_categoria = c.id_categoria 
+        WHERE p.activo = TRUE
+    """
+    parametros = []
+    if search_query:
+        sql += " AND p.nombre ILIKE %s"; parametros.append(f"%{search_query}%")
+    if cat_filter != 'todas':
+        sql += " AND p.id_categoria = %s"; parametros.append(cat_filter)
+        
+    sql += " ORDER BY p.id_producto DESC"
+    cursor.execute(sql, tuple(parametros))
     productos = cursor.fetchall()
+    
     cursor.execute("SELECT id_categoria, nombre FROM categorias")
     categorias = cursor.fetchall()
     cursor.close(); conexion.close()
-    return render_template('productos.html', productos=productos, categorias=categorias)
+    return render_template('productos.html', productos=productos, categorias=categorias, 
+                           search_query=search_query, cat_filter=cat_filter)
 
 @app.route('/ventas')
 def vista_ventas():
     if 'id_usuario' not in session or session.get('rol') != 'admin':
         return redirect(url_for('login'))
+    
+    search_id = request.args.get('search_id', type=int)
     page = request.args.get('page', 1, type=int)
     per_page = 20
     offset = (page - 1) * per_page
-    conexion = psycopg2.connect(**DB_CONFIG); cursor = conexion.cursor()
-    cursor.execute("SELECT COUNT(*) FROM ventas")
-    total_ventas = cursor.fetchone()[0]
-    total_pages = (total_ventas + per_page - 1) // per_page
-    cursor.execute("""
-        SELECT v.id_venta, COALESCE(u.nombre, v.cliente, 'Simulado') as nombre_cliente, v.fecha::date, v.total 
-        FROM ventas v LEFT JOIN usuarios u ON v.id_usuario = u.id_usuario 
-        ORDER BY v.id_venta DESC LIMIT %s OFFSET %s
-    """, (per_page, offset))
-    ventas = cursor.fetchall()
+
+    conexion = psycopg2.connect(**DB_CONFIG)
+    cursor = conexion.cursor()
+
+    if search_id:
+        # CAMBIO CLAVE: Buscamos el ID y los 9 registros menores (anteriores)
+        # Usamos <= para incluir el ID buscado y LIMIT 10 para completar el grupo
+        cursor.execute("""
+            SELECT v.id_venta, u.nombre, v.fecha::date, v.total 
+            FROM ventas v JOIN usuarios u ON v.id_usuario = u.id_usuario 
+            WHERE v.id_venta <= %s 
+            ORDER BY v.id_venta DESC 
+            LIMIT 10
+        """, (search_id,))
+        ventas = cursor.fetchall()
+        total_ventas = len(ventas)
+        total_pages = 1
+    else:
+        # Paginación normal (sin cambios)
+        cursor.execute("SELECT COUNT(*) FROM ventas")
+        total_total = cursor.fetchone()[0]
+        total_pages = (total_total + per_page - 1) // per_page
+        cursor.execute("""
+            SELECT v.id_venta, u.nombre, v.fecha::date, v.total 
+            FROM ventas v JOIN usuarios u ON v.id_usuario = u.id_usuario 
+            ORDER BY v.id_venta DESC LIMIT %s OFFSET %s
+        """, (per_page, offset))
+        ventas = cursor.fetchall()
+        total_ventas = total_total # Usamos el conteo real para el texto de arriba
+
     cursor.close(); conexion.close()
-    return render_template('ventas.html', ventas=ventas, page=page, total_pages=total_pages, total_total=total_ventas)
+    return render_template('ventas.html', ventas=ventas, page=page, total_pages=total_pages, total_total=total_ventas, search_id=search_id)
+
+@app.route('/admin/ticket/<int:id_venta>')
+def admin_descargar_ticket(id_venta):
+    # Seguridad: solo el admin puede ver cualquier ticket
+    if session.get('rol') != 'admin': return redirect('/')
+    
+    conexion = psycopg2.connect(**DB_CONFIG)
+    cursor = conexion.cursor()
+    
+    cursor.execute("""
+        SELECT p.nombre, 
+               d.cantidad, 
+               CAST(d.precio_unitario AS FLOAT), 
+               CAST(d.subtotal AS FLOAT)
+        FROM detalle_ventas d 
+        JOIN productos p ON d.id_producto = p.id_producto 
+        WHERE d.id_venta = %s
+    """, (id_venta,))
+    
+    detalles = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    
+    headers = ["Producto", "Cant.", "Precio Unit.", "Subtotal"]
+    return generar_pdf_documento(f"DETALLE DE VENTA #{id_venta}", headers, detalles, f"ticket_admin_{id_venta}.pdf", mostrar_total=True)
 
 # ==========================================
 # 4. RUTAS DEL CLIENTE (HISTORIAL Y TICKET)
@@ -535,6 +602,61 @@ def grafico_tendencias():
         return jsonify({'mensaje': 'Éxito', 'imagen': base64.b64encode(img.getvalue()).decode('utf8')})
     except Exception as e:
         return jsonify({'mensaje': 'Error', 'error': str(e)})
+    
+    # --- ELIMINAR PRODUCTO ---
+@app.route('/productos/eliminar/<int:id>')
+def eliminar_producto(id):
+    if session.get('rol') != 'admin': return redirect(url_for('login'))
+    
+    conexion = psycopg2.connect(**DB_CONFIG)
+    cursor = conexion.cursor()
+    try:
+        # En lugar de DELETE, usamos UPDATE
+        cursor.execute("UPDATE productos SET activo = FALSE WHERE id_producto = %s", (id,))
+        conexion.commit()
+    except Exception as e:
+        print(f"Error al desactivar: {e}")
+        conexion.rollback()
+    finally:
+        cursor.close(); conexion.close()
+    
+    return redirect(url_for('vista_productos'))
+
+# --- EDITAR PRODUCTO (VISTA Y LÓGICA) ---
+@app.route('/productos/editar/<int:id>', methods=['GET', 'POST'])
+def editar_producto(id):
+    if session.get('rol') != 'admin': return redirect(url_for('login'))
+    
+    conexion = psycopg2.connect(**DB_CONFIG)
+    cursor = conexion.cursor()
+
+    if request.method == 'POST':
+        # Capturamos los nuevos datos del formulario
+        nombre = request.form['nombre']
+        precio = request.form['precio_base']
+        stock = request.form['stock']
+        id_cat = request.form['id_categoria']
+        
+        cursor.execute("""
+            UPDATE productos 
+            SET nombre = %s, precio_base = %s, stock = %s, id_categoria = %s 
+            WHERE id_producto = %s
+        """, (nombre, precio, stock, id_cat, id))
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        return redirect(url_for('vista_productos'))
+
+    # Si es GET, buscamos los datos actuales para llenar el formulario
+    cursor.execute("SELECT * FROM productos WHERE id_producto = %s", (id,))
+    producto = cursor.fetchone()
+    
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
+    
+    cursor.close()
+    conexion.close()
+    return render_template('editar_producto.html', producto=producto, categorias=categorias)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
