@@ -18,7 +18,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "supermercado",
     "user": "postgres",
-    "password": "123" 
+    "password": "AlvaroG" 
 }
 
 # Esto es para que el HTML pueda usar max() y min() en la paginación
@@ -339,6 +339,59 @@ def historial_cliente():
     pedidos = cursor.fetchall()
     cursor.close(); conexion.close()
     return render_template('historial.html', pedidos=pedidos, nombre_usuario=session['nombre'])
+
+@app.route('/perfil')
+def perfil_cliente():
+    if 'id_usuario' not in session:
+        return redirect(url_for('login'))
+
+    conexion = psycopg2.connect(**DB_CONFIG)
+    cursor = conexion.cursor()
+
+    # Datos básicos del usuario
+    cursor.execute("SELECT nombre, correo FROM usuarios WHERE id_usuario = %s",
+                   (session['id_usuario'],))
+    usuario = cursor.fetchone()
+    if not usuario:
+        cursor.close()
+        conexion.close()
+        session.clear()
+        return redirect(url_for('login'))
+
+    # Estadísticas de compras con detalle real
+    cursor.execute("""
+        SELECT COUNT(v.id_venta) AS total_pedidos,
+               COALESCE(SUM(v.total), 0) AS total_gastado
+        FROM ventas v
+        JOIN detalle_ventas d ON v.id_venta = d.id_venta
+        WHERE v.id_usuario = %s
+    """, (session['id_usuario'],))
+    stats = cursor.fetchone()
+    total_pedidos = stats[0]
+    total_gastado = float(stats[1]) if stats[1] else 0.0
+
+    # Últimos 5 pedidos (con conteo de artículos)
+    cursor.execute("""
+        SELECT v.id_venta, v.fecha::date, v.total, COUNT(d.id_detalle) AS items
+        FROM ventas v
+        JOIN detalle_ventas d ON v.id_venta = d.id_venta
+        WHERE v.id_usuario = %s
+        GROUP BY v.id_venta, v.fecha, v.total
+        ORDER BY v.fecha DESC
+        LIMIT 5
+    """, (session['id_usuario'],))
+    ultimos_pedidos = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return render_template('perfil.html',
+                           usuario=usuario,              # [nombre, correo]
+                           total_pedidos=total_pedidos,
+                           total_gastado=total_gastado,
+                           ultimos_pedidos=ultimos_pedidos,
+                           nombre_usuario=session['nombre'],
+                           logueado=True)
 
 @app.route('/cliente/descargar_ticket/<int:id_venta>')
 def descargar_ticket(id_venta):

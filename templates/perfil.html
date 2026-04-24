@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Mercado Fresco</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .bg-verde { background-color: #16a34a !important; }
+        .card-perfil {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        }
+        .avatar-circle {
+            width: 90px; height: 90px;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            margin: 0 auto 15px;
+            box-shadow: 0 8px 20px rgba(22, 163, 74, 0.3);
+        }
+        .stat-box {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px 20px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .pedido-mini {
+            border-left: 4px solid #16a34a;
+            transition: all 0.2s;
+        }
+        .pedido-mini:hover {
+            background-color: #f0fdf4;
+            transform: translateX(3px);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Navbar (mismo estilo que portada y tienda) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-verde p-3 sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-4" href="/">
+                <i class="fas fa-leaf me-2"></i>Mercado Fresco
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPerfil">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="menuPerfil">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-medium" href="/tienda">
+                            <i class="fas fa-store-alt me-1"></i> Tienda
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-medium" href="/cliente/historial">
+                            <i class="fas fa-history me-1"></i> Historial
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white fw-bold" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ nombre_usuario }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4">
+                            <li><a class="dropdown-item active fw-bold" href="/perfil">
+                                <i class="fas fa-id-card me-2"></i>Mi Perfil
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger fw-bold" href="/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <!-- Cabecera del perfil -->
+        <div class="text-center mb-5">
+            <div class="avatar-circle">
+                {{ nombre_usuario[0].upper() }}
+            </div>
+            <h2 class="fw-bold mb-1">{{ usuario[0] }}</h2>
+            <p class="text-muted"><i class="fas fa-envelope me-2"></i>{{ usuario[1] }}</p>
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <i class="fas fa-box-open fs-2 text-success mb-3"></i>
+                    <h5 class="fw-bold">{{ total_pedidos }}</h5>
+                    <p class="text-muted mb-0">Pedidos realizados</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <i class="fas fa-dollar-sign fs-2 text-warning mb-3"></i>
+                    <h5 class="fw-bold">${{ "%.2f"|format(total_gastado) }}</h5>
+                    <p class="text-muted mb-0">Total gastado</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <i class="fas fa-chart-line fs-2 text-info mb-3"></i>
+                    <h5 class="fw-bold">
+                        {% if total_pedidos > 0 %}
+                            ${{ "%.2f"|format(total_gastado / total_pedidos) }}
+                        {% else %}
+                            $0.00
+                        {% endif %}
+                    </h5>
+                    <p class="text-muted mb-0">Ticket promedio</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Últimos pedidos (resumen) -->
+        <div class="card card-perfil p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold m-0"><i class="fas fa-clock text-success me-2"></i>Últimos pedidos</h4>
+                <a href="/cliente/historial" class="btn btn-outline-success rounded-pill btn-sm fw-bold">
+                    Ver todos <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            {% if ultimos_pedidos %}
+                <div class="list-group list-group-flush">
+                    {% for pedido in ultimos_pedidos %}
+                    <div class="list-group-item border-0 pedido-mini mb-3 bg-white rounded-3 shadow-sm p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-success-subtle text-success fw-bold me-2">#{{ pedido[0] }}</span>
+                                <span class="text-muted small">
+                                    <i class="far fa-calendar-alt me-1"></i>{{ pedido[1] }}
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <h5 class="text-success fw-bold mb-0">${{ "%.2f"|format(pedido[2]) }}</h5>
+                                <small class="text-muted">{{ pedido[3] }} artículo(s)</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="/cliente/descargar_ticket/{{ pedido[0] }}"
+                               class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                <i class="fas fa-file-pdf text-danger me-1"></i>Descargar ticket
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-receipt fa-4x text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted fw-bold">Aún no has realizado ninguna compra.</p>
+                    <a href="/tienda" class="btn btn-success rounded-pill px-4 fw-bold">
+                        <i class="fas fa-shopping-cart me-2"></i>Ir a la tienda
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
